@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from config.config import Config, load_config
+from database.database import init_db
 from services.file_handling import prepare_news
 
 
@@ -30,3 +31,8 @@ async def main():
     logger.info("Preparing news")
     news = prepare_news('text_news/news.txt')
     logger.info('The news is uploaded. Total news: %d', len(news))
+
+    db: dict = init_db()
+    dp.workflow_data.update(news=news, db=db)
+
+    await 
