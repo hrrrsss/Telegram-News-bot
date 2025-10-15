@@ -5,6 +5,7 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message, FSInputFile, InputMediaPhoto
 from keyboards.pagination_kb import create_pagination_keyboard
+from keyboards.favorite_kb import create_favorite_keyboard
 from lexicon.lexicon import LEXICON
 
 user_router = Router()
@@ -39,27 +40,32 @@ async def process_beggining_command(message: Message, news: dict, photos: dict, 
     )
 
 
-# @user_router.message(Command(commands="continue"))
-# async def procces_continue_command(message: Message, news: dict, photos: dict, db: dict):
-#     text = [f'{k}\n\n{v}' for k, v in news[db["users"][message.from_user.id]["page"]].items()]
-#     photo = FSInputFile(photos[db["users"][message.from_user.id]["img"]])
-#     await message.answer_photo(
-#         photo=photo,
-#         text=text,
-#         reply_markup=create_pagination_keyboard(
-#             "backward",
-#             f"{db['users'][message.from_user.id]['page']}/{len(news)}",
-#             "forward",
-#         ),
-#     )
+@user_router.message(Command(commands="continue"))
+async def procces_continue_command(message: Message, news: dict, photos: dict, db: dict):
+    text = [f'{k}\n\n{v}' for k, v in news[db["users"][message.from_user.id]["page"]].items()]
+    photo = FSInputFile(photos[db["users"][message.from_user.id]["img"]])
+    await message.answer_photo(
+        photo=photo,
+        caption=text[0],
+        reply_markup=create_pagination_keyboard(
+            "backward",
+            f"{db['users'][message.from_user.id]['page']}/{len(news)}",
+            "forward",
+        ),
+    )
 
 
-# @user_router.message(Command(commands="favorite"))
-# async def procces_favorite_command(message: Message, news: dict, photos: dict, db: dict):
-#     if db["users"][message.from_user.id]["favorite"]:
-#         await message.answer_photo(
-#             photo=
-#         )
+@user_router.message(Command(commands="favorite"))
+async def procces_favorite_command(message: Message, news: dict, db: dict):
+    if db["users"][message.from_user.id]["favorite"]:
+        await message.answer(
+            text=LEXICON[message.text],
+            reply_markup=create_favorite_keyboard(
+                *db["users"][message.from_user.id]["favorite"], news=news
+            ),
+        )
+    else:
+        await message.answer(text=LEXICON["no_favorite"])
 
 
 @user_router.callback_query(F.data == "forward")
@@ -100,3 +106,13 @@ async def procces_backward_press(callback: CallbackQuery, news: dict, photos: di
             )
         )
         await callback.answer()
+
+
+@user_router.callback_query(
+    lambda x: "/" in x.data and x.data.replace("/", "").isdigit()
+)
+async def proccess_page_press(callback: CallbackQuery, db: dict):
+    db["users"][callback.from_user.id]["favorite"].add(
+        db["users"][callback.from_user.id]["page"]
+    )
+    await callback.answer("Новость добавлена в избранные!")
